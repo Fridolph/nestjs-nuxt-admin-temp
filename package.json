@@ -1,0 +1,38 @@
+{
+  "name": "nestjs-nuxt-admin-temp",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "packageManager": "pnpm@12.16.1",
+  "engines": {
+    "node": ">=22.0.0",
+    "pnpm": ">=12"
+  },
+  "scripts": {
+    "dev": "nuxt dev",
+    "build": "nuxt build",
+    "preview": "nuxt preview --port 3050",
+    "postinstall": "nuxt prepare",
+    "typecheck": "nuxt typecheck",
+    "lint": "eslint .",
+    "test": "node --test app/utils/__tests__/*.test.mjs"
+  },
+  "dependencies": {
+    "@nuxt/ui": "^4.12.0",
+    "@pinia/colada": "^1.4.8",
+    "@pinia/colada-nuxt": "^1.2.0",
+    "@pinia/nuxt": "^1.0.3",
+    "nuxt": "4.6.3",
+    "pinia": "^4.1.0",
+    "tailwindcss": "^4.3.3",
+    "vue": "^3.5.44",
+    "zod": "^4.6.7"
+  },
+  "devDependencies": {
+    "@iconify-json/lucide": "^1.2.149",
+    "@nuxt/eslint": "^1.17.0",
+    "eslint": "^10.13.0",
+    "typescript": "~6.0.3",
+    "vue-tsc": "^3.3.14"
+  }
+}

@@ -1,0 +1,14 @@
+# 独立仓库：在学习仓库内部也使用自己的依赖和锁文件。
+packages:
+  - .
+
+allowBuilds:
+  '@parcel/watcher': true
+  esbuild: true
+  sharp: true
+  unrs-resolver: true
+  vue-demi: true
+
+minimumReleaseAgeExclude:
+  - '@vue/language-core@3.3.14'
+  - vue-tsc@3.3.14
