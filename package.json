@@ -15,7 +15,7 @@
     "postinstall": "nuxt prepare",
     "typecheck": "nuxt typecheck",
     "lint": "eslint .",
-    "test": "node --test app/utils/__tests__/*.test.mjs"
+    "test": "node --test app/utils/__tests__/*.test.mjs layers/12-teams/app/utils/__tests__/*.test.mjs"
   },
   "dependencies": {
     "@nuxt/ui": "^4.12.0",
@@ -31,6 +31,9 @@
   "devDependencies": {
     "@iconify-json/lucide": "^1.2.149",
     "@nuxt/eslint": "^1.17.0",
+    "@pinia/colada-devtools": "^2.1.0",
+    "@vitejs/devtools": "^0.8.2",
+    "@vitejs/devtools-kit": "^0.8.2",
     "eslint": "^10.13.0",
     "typescript": "~6.0.3",
     "vue-tsc": "^3.3.14"
