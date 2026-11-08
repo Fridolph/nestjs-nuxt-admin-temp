@@ -93,11 +93,11 @@ async function confirmDelete() {
   try {
     await deleteUser.mutateAsync(deletingUser.value.id);
   } catch {
-    return
-  } finally {
-    confirmOpen.value = false;
-    deletingUser.value = null;
+    // 删除失败时保留弹窗，让 deleteError 就地展示；只有成功才关闭
+    return;
   }
+  confirmOpen.value = false;
+  deletingUser.value = null;
 }
 
 function goToPage(nextPage: number, nextSize = size.value) {
