@@ -70,7 +70,7 @@ function submit() {
     notice.value = "资料没有变化，无需保存。";
     return;
   }
-  emit("submit", { mode: "edit", id: props.user.id, data });
+  emit("submit", { mode: "edit", id: props.user.userId, data });
 }
 </script>
 

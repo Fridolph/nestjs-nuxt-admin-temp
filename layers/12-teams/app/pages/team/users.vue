@@ -30,6 +30,7 @@ const {
   total,
   displayPage,
   displaySize,
+  lastPage,
   error,
   isInitialLoading,
   loading,
@@ -41,15 +42,20 @@ const {
   saving,
   saveError,
   deleting,
-  deleteError,
 } = useUsers({ page, size });
 
 // 纯展示计算：把分页信息格式化成「显示 1–5 条」。
-const firstItem = computed(() => (total.value ? (displayPage.value - 1) * displaySize.value + 1 : 0));
-const lastItem = computed(() => Math.min(displayPage.value * displaySize.value, total.value));
+// 用「实际行数」而不是「页码 × 每页条数」推算末尾，乐观删除后行数会先少一条，
+// 这样文案始终和屏幕上看到的一致。
+const firstItem = computed(() =>
+  users.value.length ? (displayPage.value - 1) * displaySize.value + 1 : 0,
+);
+const lastItem = computed(() =>
+  users.value.length ? firstItem.value + users.value.length - 1 : 0,
+);
 
 const columns: TableColumn<UserRow>[] = [
-  { accessorKey: "id", header: "ID" },
+  { accessorKey: "userId", header: "用户ID" },
   { accessorKey: "username", header: "用户名" },
   { accessorKey: "nickname", header: "昵称" },
   { accessorKey: "gender", header: "性别" },
@@ -90,14 +96,15 @@ function startDelete(user: UserRow) {
 
 async function confirmDelete() {
   if (!deletingUser.value || deleting.value) return;
-  try {
-    await deleteUser.mutateAsync(deletingUser.value.id);
-  } catch {
-    // 删除失败时保留弹窗，让 deleteError 就地展示；只有成功才关闭
-    return;
-  }
+  const userId = deletingUser.value.userId;
+  // 乐观更新：确认即收起弹窗，行马上从列表消失。
+  // 失败时由 useUsers 用快照回滚，并通过 toast 提示；所以这里不再用 deleteError 就地展示。
   confirmOpen.value = false;
-  deletingUser.value = null;
+  try {
+    await deleteUser.mutateAsync(userId);
+  } catch {
+    // mutation 已回滚缓存并提示；在事件边界结束失败请求。
+  }
 }
 
 function goToPage(nextPage: number, nextSize = size.value) {
@@ -115,11 +122,14 @@ function changeSize(nextSize: number) {
   return goToPage(1, nextSize);
 }
 
-watch([displayPage, total], ([dataPage, totalCount]) => {
-  // 只在“数据确实属于当前 URL 页”时兜底：placeholderData 期间 displayPage 还是旧页，不能据此跳页
-  if (import.meta.server || dataPage !== page.value || totalCount === 0) return;
-  const lastPage = Math.max(1, Math.ceil(totalCount / displaySize.value));
-  if (dataPage > lastPage) void goToPage(lastPage);
+watch([displayPage, lastPage, deleting], ([dataPage, last, isDeleting]) => {
+  // 删到末页最后一条时，lastPage 会先变小（total 被乐观减一），此时要把页码收回来。
+  // 三点约束：
+  // 1. 只在“数据确实属于当前 URL 页”时兜底，placeholderData 期间 displayPage 还是旧页，不能据此跳页；
+  // 2. 删除进行中先不动，否则失败回滚后会出现“跳走了又跳回来”；
+  // 3. deleting 也是依赖项——删除结束那一刻需要再跑一次，把迟到的跨页判断补上。
+  if (import.meta.server || isDeleting || dataPage !== page.value) return;
+  if (dataPage > last) void goToPage(last);
 }, { immediate: true });
 </script>
 
@@ -188,7 +198,8 @@ watch([displayPage, total], ([dataPage, totalCount]) => {
       暂无用户数据。
     </p>
 
-    <div v-if="!isInitialLoading && (!error || users.length > 0)" class="mt-5 flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+    <!-- 没有行的时候不展示分页条：末页最后一条被删掉时它会短暂为空，页面随即把页码收回去 -->
+    <div v-if="!isInitialLoading && !error && users.length > 0" class="mt-5 flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
       <p class="text-sm text-muted">显示 {{ firstItem }}–{{ lastItem }} 条，共 {{ total }} 条</p>
       <div class="flex flex-wrap items-center gap-3">
         <label for="users-page-size" class="text-sm text-muted">每页</label>
@@ -219,7 +230,6 @@ watch([displayPage, total], ([dataPage, totalCount]) => {
       :title="`删除用户 · ${deletingUser?.username ?? ''}`"
       description="删除后无法恢复，确定继续吗？"
       :pending="deleting"
-      :error="deleteError"
       @confirm="confirmDelete"
     />
   </div>

@@ -3,7 +3,7 @@ import test from "node:test";
 import { createUserPayload, createUserSchema, passwordStrength, profileChanges, profileFormSchema } from "../user-form.ts";
 
 const user = {
-  id: 1,
+  userId: 1,
   username: "alice",
   nickname: "Alice",
   profileId: 1,

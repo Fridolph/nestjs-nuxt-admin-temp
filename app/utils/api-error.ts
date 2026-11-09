@@ -1,23 +1,24 @@
 export class ApiError extends Error {
-	constructor(
-		message: string,
-		public readonly statusCode?: number,
-		public readonly details?: unknown
-	) {
+	readonly statusCode?: number
+	readonly details?: unknown
+
+	constructor(message: string, statusCode?: number, details?: unknown) {
 		super(message)
 		this.name = 'ApiError'
+		this.statusCode = statusCode
+		this.details = details
 	}
 }
 
 export function apiError(cause: unknown, fallback = '请求失败，请稍后重试'): ApiError {
 	if (cause instanceof ApiError) return cause
 	const error = cause as {
-		data?: { message?: unknown; errors?: unknown }
+		data?: { msg?: unknown; message?: unknown; errors?: unknown }
 		statusCode?: number
 		status?: number
 		message?: string
 	} | null
-	const responseMessage = error?.data?.message
+	const responseMessage = error?.data?.msg ?? error?.data?.message
 	const message =
 		typeof responseMessage === 'string'
 			? responseMessage

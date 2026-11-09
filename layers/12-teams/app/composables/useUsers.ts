@@ -1,4 +1,5 @@
 import { useMutation, useQuery, useQueryCache } from '@pinia/colada'
+import type { EntryKey } from '@pinia/colada'
 import type { ComputedRef } from 'vue'
 import type { ApiError } from '~/utils/api-error'
 import type { CreateUserInput, MutationResult, ProfileChanges, UsersPage } from '../types/user'
@@ -7,6 +8,12 @@ import type { CreateUserInput, MutationResult, ProfileChanges, UsersPage } from 
 interface UseUsersOptions {
 	page: ComputedRef<number>
 	size: ComputedRef<number>
+}
+
+/** 一条分页缓存快照，用于乐观更新失败时整体回滚。 */
+interface UsersCacheSnapshot {
+	key: EntryKey
+	data: UsersPage
 }
 
 /**
@@ -57,18 +64,18 @@ export function useUsers({ page, size }: UseUsersOptions) {
 	const { data, error, status, asyncStatus, refetch } = list
 
 	const users = computed(() => data.value?.data ?? [])
-	const total = computed(() => data.value?.pagination.total ?? 0)
+	const total = computed(() => data.value?.pageMeta.total ?? 0)
 	// 分页展示信息跟“当前真正显示的那份数据”走，而不是跟 URL 走。
 	// 否则在 placeholderData 保留上一页数据的瞬间，会出现「显示 6–8，屏幕上还是 1–5」的矛盾。
-	const displayPage = computed(() => data.value?.pagination.page ?? page.value)
-	const displaySize = computed(() => data.value?.pagination.size ?? size.value)
+	const displayPage = computed(() => data.value?.pageMeta.page ?? page.value)
+	const displaySize = computed(() => data.value?.pageMeta.size ?? size.value)
+	/** 按当前 total 推算出的最后一页，删除末页最后一条时要靠它把页码收回来。 */
+	const lastPage = computed(() => Math.max(1, Math.ceil(total.value / displaySize.value)))
 
 	/** 首次加载（无缓存、无 SSR 数据）：用骨架屏，不要渲染空表格。 */
 	const isInitialLoading = computed(() => status.value === 'pending')
 	/** 任意一次请求进行中（含翻页、刷新）：用于按钮与表格的 loading 态。 */
 	const loading = computed(() => asyncStatus.value === 'loading')
-	/** 请求成功但确实没有数据，用于「暂无数据」提示。 */
-	const isEmpty = computed(() => status.value === 'success' && users.value.length === 0)
 
 	// ── 写操作 ─────────────────────────────────────────────────
 	/**
@@ -107,13 +114,91 @@ export function useUsers({ page, size }: UseUsersOptions) {
 		},
 	})
 
-	const deleteUser = useMutation<MutationResult, number, ApiError>({
+	/** 取一份当前所有分页缓存的快照。 */
+	function snapshotUsersCache(): UsersCacheSnapshot[] {
+		return queryCache
+			.getEntries({ key: ['users'] })
+			.map(entry => ({
+				key: entry.key,
+				data: entry.state.value.data as UsersPage | undefined,
+			}))
+			.filter((snapshot): snapshot is UsersCacheSnapshot => !!snapshot.data)
+	}
+
+	/**
+	 * 从所有已缓存的分页里摘掉一行，并同步 total。
+	 *
+	 * @remarks
+	 * 目标行只可能落在其中一页里（分页不重叠），但 `total` 存在于每一页的响应里，
+	 * 所以每页都要减一，否则从一个缓存页切到另一个缓存页时数字会跳。
+	 */
+	function removeUserFromCache(id: number) {
+		for (const entry of queryCache.getEntries({ key: ['users'] })) {
+			const page = entry.state.value.data as UsersPage | undefined
+			if (!page) continue
+			const hasRow = page.data.some(user => user.userId === id)
+			queryCache.setQueryData(entry.key, {
+				...page,
+				pageMeta: { ...page.pageMeta, total: Math.max(0, page.pageMeta.total - 1) },
+				data: hasRow ? page.data.filter(user => user.userId !== id) : page.data,
+			})
+		}
+	}
+
+	/**
+	 * 删除用户（乐观更新）。
+	 *
+	 * @remarks
+	 * 四步，缺一不可：
+	 * 1. `onMutate`：`cancelQueries` 取消在途列表请求——否则它回来的旧数据会盖掉乐观修改；
+	 *    然后快照、改缓存，让行立刻消失。
+	 * 2. `mutation`：发出 DELETE。
+	 * 3. `onError`：用快照整体回滚，并用 toast 提示（弹窗在页面侧已因乐观而关闭）。
+	 * 4. `onSuccess`：失效列表并重拉。**乐观更新不能替代重拉**：
+	 *    删掉一行会让后面所有页的数据前移，只有服务端才知道新的分页边界。
+	 */
+	const deleteUser = useMutation<
+		MutationResult,
+		number,
+		ApiError,
+		{ snapshots: UsersCacheSnapshot[] }
+	>({
+		onMutate(id) {
+			queryCache.cancelQueries({ key: ['users'] })
+			const snapshots = snapshotUsersCache()
+			removeUserFromCache(id)
+			return { snapshots }
+		},
 		mutation: id => api<MutationResult>(`/users/${id}`, { method: 'DELETE' }),
+		onError(error, _id, context) {
+			for (const snapshot of context?.snapshots ?? []) {
+				queryCache.setQueryData(snapshot.key, snapshot.data)
+			}
+			toast.add({ title: '删除失败，列表已恢复', description: error.message, color: 'error' })
+		},
 		async onSuccess() {
 			toast.add({ title: '用户已删除', color: 'success' })
 			await invalidateUsers()
 		},
 	})
+
+	const deleting = deleteUser.isLoading
+
+	/**
+	 * 请求成功但确实没有数据。
+	 *
+	 * @remarks
+	 * 三种情况要排除，否则会闪一下「暂无用户数据」：
+	 * - 删除进行中：乐观更新刚把末页最后一行摘掉，此时应该等页码收回来而不是报空；
+	 * - 当前页已经越过最后一页：同上，属于马上要被纠正的中间态。
+	 */
+	const isEmpty = computed(
+		() =>
+			status.value === 'success' &&
+			!deleting.value &&
+			users.value.length === 0 &&
+			displayPage.value <= lastPage.value
+	)
 
 	// 页面只需要“是否在保存 / 最近一次错误是什么”，不必自己组合多个 isLoading。
 	const saving = computed(() => createUser.isLoading.value || updateUserProfile.isLoading.value)
@@ -121,8 +206,6 @@ export function useUsers({ page, size }: UseUsersOptions) {
 	const saveError = computed(
 		() => createUser.error.value?.message ?? updateUserProfile.error.value?.message ?? null
 	)
-	const deleting = deleteUser.isLoading
-	const deleteError = computed(() => deleteUser.error.value?.message ?? null)
 
 	return {
 		// 列表数据与状态
@@ -130,6 +213,7 @@ export function useUsers({ page, size }: UseUsersOptions) {
 		total,
 		displayPage,
 		displaySize,
+		lastPage,
 		error,
 		isInitialLoading,
 		loading,
@@ -142,6 +226,5 @@ export function useUsers({ page, size }: UseUsersOptions) {
 		saving,
 		saveError,
 		deleting,
-		deleteError,
 	}
 }
