@@ -2,7 +2,7 @@ import { useMutation, useQuery, useQueryCache } from '@pinia/colada'
 import type { EntryKey } from '@pinia/colada'
 import type { ComputedRef } from 'vue'
 import type { ApiError } from '~/utils/api-error'
-import type { CreateUserInput, MutationResult, ProfileChanges, UsersPage } from '../types/user'
+import type { CreateUserInput, MutationResult, UserChanges, UsersPage } from '../types/user'
 
 /** `useUsers` 的分页参数，均来自 URL 查询参数，因此都是响应式的。 */
 interface UseUsersOptions {
@@ -103,11 +103,11 @@ export function useUsers({ page, size }: UseUsersOptions) {
 
 	const updateUserProfile = useMutation<
 		MutationResult,
-		{ id: number; data: ProfileChanges },
+		{ id: number; data: UserChanges },
 		ApiError
 	>({
 		mutation: ({ id, data }) =>
-			api<MutationResult>(`/users/${id}/profile`, { method: 'PATCH', body: data }),
+			api<MutationResult>(`/users/${id}`, { method: 'PATCH', body: data }),
 		async onSuccess() {
 			toast.add({ title: '用户资料已更新', color: 'success' })
 			await invalidateUsers()

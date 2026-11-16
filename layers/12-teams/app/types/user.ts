@@ -11,6 +11,9 @@
 export interface UserRow {
 	userId: number
 	username: string
+	phone: string | null
+	email: string | null
+	roles: string[]
 	nickname: string | null
 	profileId: number | null
 	gender: number | null
@@ -64,7 +67,14 @@ export type ProfileChanges = Partial<{
 	address: string | null
 }>
 
+export interface UserChanges {
+	phone?: string | null
+	email?: string | null
+	roleCode?: 'admin' | 'user' | 'premium' | 'guest'
+	profile?: ProfileChanges
+}
+
 /** 用户抽屉的提交事件：创建与编辑的判别联合。 */
 export type UserDrawerPayload =
 	| { mode: 'create'; data: CreateUserInput }
-	| { mode: 'edit'; id: number; data: ProfileChanges }
+	| { mode: 'edit'; id: number; data: UserChanges }

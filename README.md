@@ -33,8 +33,8 @@ pnpm preview
 - Nuxt **4.6.3** / Vue 3：文件路由、SSR、Layouts、Layers。
 - Nuxt UI 4 / Tailwind CSS 4：沿用原后台视觉、可折叠侧栏、深浅主题、移动端菜单。
 - Pinia：`app/stores/admin.ts` 管理侧栏开关和折叠状态，不涉及登录。
-- Pinia Colada：`/team/users` 使用 `useQuery` 按页缓存用户列表，写入后使列表缓存失效；登录注册仍只迁移界面。
-- Zod：登录邮箱必填校验；注册姓名、邮箱、密码长度与确认密码校验。
+- Pinia Colada：`/team/users` 使用 `useQuery` 按页缓存用户列表，写入后使列表缓存失效。
+- Zod：登录用户名与密码校验；注册用户名、可选昵称、密码强度与确认密码校验。
 - Nuxt ESLint / vue-tsc / Node Test Runner：静态检查和表单验证测试。
 
 ## 路由
@@ -42,8 +42,8 @@ pnpm preview
 | 路径 | 用途 |
 | --- | --- |
 | `/` | Dashboard 示例 |
-| `/login` | 登录界面；提交只提示校验通过 |
-| `/register` | 注册界面；提交只提示校验通过 |
+| `/login` | 用户名登录，成功后进入后台首页 |
+| `/register` | 注册普通用户，成功后自动登录并进入后台首页 |
 | `/projects`、`/projects/recent` | 项目路由骨架 |
 | `/team/users` | 用户列表，连接本地后端的分页查询、创建、资料编辑和删除 |
 | `/team/members`、`/team/roles` | 团队路由骨架 |
@@ -51,7 +51,7 @@ pnpm preview
 | `/settings/company`、`/settings/team` | 含二级导航的设置页面 |
 | `/help`、`/release-notes` | 帮助与本次迁移说明 |
 
-登录注册页面通过“浏览后台演示”访问首页，二者互相提供跳转链接。原登录页的忘记密码链接没有对应实现，此次未保留该入口。
+登录注册页面通过“浏览后台演示”访问首页，二者互相提供跳转链接。邮箱与手机登录暂时禁用，后续再接入对应接口。
 
 ## 目录与扩展位置
 
@@ -138,7 +138,7 @@ const canEditProfile = computed(() => hasPermission('user.profile:edit'))
 
 未迁移编辑器、上传、PDF、简历、Comps/Demos 及 Alova 请求封装，也未引入旧 monorepo 的业务包。帮助页保留基础说明，更新记录改为本次实际迁移内容；侧栏初始关闭移动端抽屉，设置二级导航在小屏也可访问。系统字体和本地图标用于避免构建依赖远程字体服务。
 
-后续接入真实鉴权时，再单独确定后端鉴权接口、会话及路由守卫；当前表单提交处理在 `app/pages/login.vue` 和 `app/pages/register.vue`。
+认证请求由 `app/composables/useAuth.ts` 调用后端 `/auth/signin` 与 `/auth/register`，成功后保存 Bearer Token；`app/plugins/api.ts` 自动附加请求头。路由守卫、刷新令牌与服务端会话仍留待后续完善。
 
 ## 界面迁移验证
 

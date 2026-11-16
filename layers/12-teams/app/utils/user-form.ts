@@ -1,5 +1,5 @@
 import { z } from "zod";
-import type { CreateUserInput, ProfileChanges, UserRow } from "../types/user";
+import type { CreateUserInput, ProfileChanges, UserChanges, UserRow } from "../types/user";
 
 export function passwordStrength(password: string) {
   const categories = [/[A-Za-z]/, /\d/, /[^A-Za-z0-9\s]/].filter(pattern => pattern.test(password)).length;
@@ -36,6 +36,9 @@ export const profileFormSchema = (user: Pick<UserRow, "nickname">) => z.object({
   gender: z.enum(["", "0", "1"]),
   photo: z.string().max(512, "照片地址最多 512 个字符"),
   address: z.string().max(120, "地址最多 120 个字符"),
+  phone: z.union([z.literal(""), z.string().regex(/^1[3-9]\d{9}$/, "请输入有效的 11 位手机号")]).default(""),
+  email: z.union([z.literal(""), z.email("请输入有效的邮箱地址").max(120)]).default(""),
+  roleCode: z.enum(["", "admin", "user", "premium", "guest"]).default(""),
 });
 
 export type CreateUserForm = z.output<typeof createUserSchema>;
@@ -53,7 +56,7 @@ export function createUserPayload(input: CreateUserForm): CreateUserInput {
   };
 }
 
-export function profileChanges(user: UserRow, input: ProfileFormInput): ProfileChanges {
+export function profileChanges(user: UserRow, input: ProfileFormInput): UserChanges {
   const changes: ProfileChanges = {};
   const nickname = input.nickname.trim();
   if (nickname !== user.nickname && input.nickname !== (user.nickname ?? "")) changes.nickname = nickname;
@@ -67,5 +70,10 @@ export function profileChanges(user: UserRow, input: ProfileFormInput): ProfileC
   const address = input.address || null;
   if (address !== user.address) changes.address = address;
 
-  return changes;
+  const result: UserChanges = {};
+  if (Object.keys(changes).length) result.profile = changes;
+  if ((input.phone || null) !== user.phone) result.phone = input.phone || null;
+  if ((input.email || null) !== user.email) result.email = input.email || null;
+  if (input.roleCode && (user.roles.length !== 1 || user.roles[0] !== input.roleCode)) result.roleCode = input.roleCode;
+  return result;
 }

@@ -17,7 +17,7 @@ const emit = defineEmits<{
   submit: [payload: UserDrawerPayload];
 }>();
 const open = defineModel<boolean>("open", { required: true });
-const form = reactive({ username: "", password: "", confirmPassword: "", roleIds: [] as (2 | 3 | 4 | 5)[], nickname: "", gender: "" as "" | "0" | "1", photo: "", address: "", bio: "" });
+const form = reactive({ username: "", password: "", confirmPassword: "", roleIds: [] as (2 | 3 | 4 | 5)[], nickname: "", gender: "" as "" | "0" | "1", photo: "", address: "", phone: "", email: "", roleCode: "" as "" | "admin" | "user" | "premium" | "guest", bio: "" });
 const notice = shallowRef("");
 const passwordVisible = shallowRef(false);
 const confirmPasswordVisible = shallowRef(false);
@@ -38,11 +38,18 @@ const roleOptions = [
   { label: "高级用户", value: "4" },
   { label: "访客", value: "5" },
 ];
+const editRoleOptions = [
+  { label: "管理员", value: "admin" },
+  { label: "普通用户", value: "user" },
+  { label: "高级用户", value: "premium" },
+  { label: "访客", value: "guest" },
+];
+const isSuperAdmin = computed(() => !!props.user?.roles.includes("super_admin"));
 
 watch([open, () => props.user], ([isOpen, user]) => {
   if (!isOpen) return;
   Object.assign(form, {
-    username: "",
+    username: user?.username ?? "",
     password: "",
     confirmPassword: "",
     roleIds: [],
@@ -50,6 +57,9 @@ watch([open, () => props.user], ([isOpen, user]) => {
     gender: user?.gender == null ? "" : String(user.gender),
     photo: user?.photo ?? "",
     address: user?.address ?? "",
+    phone: user?.phone ?? "",
+    email: user?.email ?? "",
+    roleCode: user?.roles.find(role => ["admin", "user", "premium", "guest"].includes(role)) ?? "",
     bio: "",
   });
   notice.value = "";
@@ -78,14 +88,17 @@ function submit() {
   <AppDrawer
     v-model:open="open"
     :closable="!pending"
-    :title="user ? `编辑用户 · ${user.username}` : '创建新用户'"
-    :description="user ? '只更新用户资料，用户名不可修改。' : '创建用户并初始化默认资料。'"
+    :title="user ? '编辑用户' : '创建新用户'"
+    :description="user ? '更新用户资料、联系方式和角色；用户名不可修改。' : '创建用户并初始化默认资料。'"
   >
     <div>
       <UForm id="user-form" :schema="schema" :state="form" class="space-y-4" @submit="submit">
         <template v-if="!user">
           <UFormField name="username" label="用户名" required>
             <UInput v-model="form.username" autocomplete="off" class="w-full" />
+          </UFormField>
+          <UFormField name="nickname" label="昵称" :required="!!user" :description="user ? undefined : '可选，留空时使用用户名。'">
+            <UInput v-model="form.nickname" class="w-full" />
           </UFormField>
           <UFormField name="password" label="密码" required>
             <UInput v-model="form.password" :type="passwordVisible ? 'text' : 'password'" autocomplete="new-password" class="w-full">
@@ -120,10 +133,24 @@ function submit() {
             <UCheckboxGroup v-model="selectedRoles" :items="roleOptions" value-key="value" class="w-full" />
           </UFormField>
         </template>
-        <div>
+        <template v-else>
+          <UFormField label="用户名">
+            <UInput v-model="form.username" class="w-full" disabled />
+          </UFormField>
           <UFormField name="nickname" label="昵称" :required="!!user" :description="user ? undefined : '可选，留空时使用用户名。'">
             <UInput v-model="form.nickname" class="w-full" />
           </UFormField>
+          <UFormField name="roleCode" label="用户角色" :description="isSuperAdmin ? '超管角色不可修改。' : '当前仅支持选择一个角色。'">
+            <USelect v-model="form.roleCode" :items="editRoleOptions" value-key="value" class="w-full" :disabled="isSuperAdmin" placeholder="选择角色" />
+          </UFormField>
+          <UFormField name="phone" label="手机号" description="可选，留空保存会清除手机号。">
+            <UInput v-model="form.phone" type="tel" autocomplete="tel" class="w-full" />
+          </UFormField>
+          <UFormField name="email" label="用户邮箱" description="可选，留空保存会清除邮箱。">
+            <UInput v-model="form.email" type="email" autocomplete="email" class="w-full" />
+          </UFormField>
+        </template>
+        <div>
           <UFormField name="gender" label="性别">
             <URadioGroup v-model="form.gender" :items="genderOptions" orientation="horizontal" />
           </UFormField>

@@ -3,8 +3,22 @@ import type { LoginCredentials } from "../utils/auth-schema";
 
 definePageMeta({ layout: false, title: "登录" });
 const toast = useToast();
-function handleSubmit(_credentials: LoginCredentials) {
-  toast.add({ title: "表单校验通过", description: "当前仅演示界面，未发起登录请求。", color: "info" });
+const { signIn } = useAuth();
+const pending = shallowRef(false);
+const error = shallowRef("");
+async function handleSubmit(credentials: LoginCredentials) {
+  if (pending.value) return;
+  pending.value = true;
+  error.value = "";
+  try {
+    const response = await signIn(credentials);
+    toast.add({ title: "登录成功", description: response.msg, color: "success" });
+    await navigateTo("/");
+  } catch (cause) {
+    error.value = cause instanceof Error ? cause.message : "登录失败，请稍后重试";
+  } finally {
+    pending.value = false;
+  }
 }
 </script>
 
@@ -20,7 +34,7 @@ function handleSubmit(_credentials: LoginCredentials) {
       </NuxtLink>
     </template>
 
-    <AuthLoginForm @submit="handleSubmit" />
+    <AuthLoginForm :pending="pending" :error="error" @submit="handleSubmit" />
     <UButton to="/" label="浏览后台演示" variant="link" color="neutral" class="mt-4" />
 
     <template #image-caption>

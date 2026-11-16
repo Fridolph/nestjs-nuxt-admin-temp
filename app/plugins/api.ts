@@ -12,10 +12,12 @@ import { apiError } from '../utils/api-error'
  * 否则 Pinia Colada 会把它当成“查询成功”。
  */
 export default defineNuxtPlugin(() => {
+	const accessToken = shallowRef(useCookie<string | null>('access_token').value)
 	const api = $fetch.create({
 		baseURL: useRuntimeConfig().public.apiBase,
 		onRequest({ options }) {
 			options.headers.set('Accept', 'application/json')
+			if (accessToken.value) options.headers.set('Authorization', `Bearer ${accessToken.value}`)
 		},
 		onResponse({ response }) {
 			// 处理「HTTP 200 + body.code >= 400」这种业务失败
@@ -37,5 +39,5 @@ export default defineNuxtPlugin(() => {
 		},
 	})
 
-	return { provide: { api } }
+	return { provide: { api, authToken: accessToken } }
 })

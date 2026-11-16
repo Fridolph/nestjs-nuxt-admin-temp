@@ -3,14 +3,28 @@ import type { RegisterCredentials } from "../utils/auth-schema";
 
 definePageMeta({ layout: false, title: "注册" });
 const toast = useToast();
-function handleSubmit(_credentials: RegisterCredentials) {
-  toast.add({ title: "表单校验通过", description: "当前仅演示界面，未创建或保存账号。", color: "info" });
+const { register } = useAuth();
+const pending = shallowRef(false);
+const error = shallowRef("");
+async function handleSubmit(credentials: RegisterCredentials) {
+  if (pending.value) return;
+  pending.value = true;
+  error.value = "";
+  try {
+    const response = await register(credentials);
+    toast.add({ title: "注册成功", description: response.msg, color: "success" });
+    await navigateTo("/");
+  } catch (cause) {
+    error.value = cause instanceof Error ? cause.message : "注册失败，请稍后重试";
+  } finally {
+    pending.value = false;
+  }
 }
 </script>
 
 <template>
   <AuthSplitLayout image-side="right">
-    <AuthRegisterForm @submit="handleSubmit" />
+    <AuthRegisterForm :pending="pending" :error="error" @submit="handleSubmit" />
     <UButton to="/" label="浏览后台演示" variant="link" color="neutral" class="mt-4" />
     <template #image-caption>
       <div class="max-w-sm space-y-3">

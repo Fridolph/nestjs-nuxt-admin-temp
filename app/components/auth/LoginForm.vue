@@ -14,8 +14,8 @@ interface LoginFormProps {
 withDefaults(defineProps<LoginFormProps>(), {
   pending: false,
   error: "",
-  title: "Sign in",
-  submitLabel: "Sign in",
+  title: "登录账号",
+  submitLabel: "登录",
   createAccountTo: "/register",
 });
 
@@ -25,19 +25,19 @@ const emit = defineEmits<{
 
 const fields: AuthFormField[] = [
   {
-    name: "email",
-    type: "email",
-    label: "Email",
-    placeholder: "you@example.com",
-    leadingIcon: "i-lucide-mail",
+    name: "username",
+    type: "text",
+    label: "用户名",
+    placeholder: "请输入用户名",
+    leadingIcon: "i-lucide-user",
     size: "lg",
     required: true,
   },
   {
     name: "password",
     type: "password",
-    label: "Password",
-    placeholder: "Enter your password",
+    label: "密码",
+    placeholder: "请输入密码",
     leadingIcon: "i-lucide-lock-keyhole",
     size: "lg",
     required: true,
@@ -66,9 +66,19 @@ function handleSubmit(event: { data: LoginCredentials }) {
     @submit="handleSubmit"
   >
     <template #leading>
-      <div class="mb-2 inline-flex items-center gap-2 text-sm font-medium text-muted">
-        <span class="text-lg" aria-hidden="true">👋</span>
-        <span>Welcome back</span>
+      <div class="mb-2 space-y-3">
+        <div class="inline-flex rounded-lg bg-elevated p-1" role="tablist" aria-label="登录方式">
+          <UButton size="sm" color="primary" variant="soft" role="tab" aria-selected="true">用户名</UButton>
+          <UTooltip text="邮箱登录后续支持">
+            <span tabindex="0"><UButton size="sm" color="neutral" variant="ghost" role="tab" disabled>邮箱</UButton></span>
+          </UTooltip>
+          <UTooltip text="手机登录后续支持">
+            <span tabindex="0"><UButton size="sm" color="neutral" variant="ghost" role="tab" disabled>手机</UButton></span>
+          </UTooltip>
+        </div>
+        <div class="inline-flex items-center gap-2 text-sm font-medium text-muted">
+          <span class="text-lg" aria-hidden="true">👋</span><span>欢迎回来</span>
+        </div>
       </div>
     </template>
 
@@ -82,13 +92,13 @@ function handleSubmit(event: { data: LoginCredentials }) {
       />
     </template>
 
-    <template #description>仅作界面演示，不验证账号或创建登录会话。</template>
+    <template #description>使用用户名和密码登录管理后台。</template>
 
     <template #footer>
       <p class="text-center text-sm text-muted">
-        New here?
+        还没有账号？
         <ULink :to="createAccountTo" class="font-medium text-primary hover:underline">
-          Create an account
+          创建账号
         </ULink>
       </p>
     </template>

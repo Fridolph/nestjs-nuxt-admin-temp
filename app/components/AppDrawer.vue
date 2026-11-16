@@ -36,25 +36,27 @@ const drawerUi = computed(() => {
     v-model:open="open"
     v-bind="attrs"
     direction="right"
-    :title="props.title"
-    :description="props.description"
     :close="props.closable"
     :handle="false"
     :dismissible="props.closable"
     :ui="drawerUi"
   >
-    <template v-if="$slots.header" #header>
-      <div class="flex items-start justify-between gap-4">
+    <template #header>
+      <div class="flex-1 flex items-start justify-between gap-4">
         <div class="min-w-0 flex-1">
-          <slot name="header" />
+          <slot name="header">
+            <h2 class="text-base font-semibold text-highlighted">{{ props.title }}</h2>
+            <p v-if="props.description" class="mt-1 text-sm text-muted">{{ props.description }}</p>
+          </slot>
         </div>
         <UButton
           v-if="props.closable"
           icon="i-lucide-x"
-          aria-label="Close"
+          aria-label="关闭"
           color="neutral"
           variant="ghost"
-          size="sm"
+          size="md"
+          class="-mr-1 -mt-1 shrink-0"
           @click="open = false"
         />
       </div>

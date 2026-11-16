@@ -30,6 +30,7 @@
   },
   "devDependencies": {
     "@iconify-json/lucide": "^1.2.149",
+    "@iconify-json/ri": "^1.2.10",
     "@nuxt/eslint": "^1.17.0",
     "@pinia/colada-devtools": "^2.1.0",
     "@vitejs/devtools": "^0.8.2",

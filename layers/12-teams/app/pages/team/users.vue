@@ -11,6 +11,9 @@ definePageMeta({
 const route = useRoute();
 const pageSizes = [5, 10, 20, 50];
 const pageSizeOptions = pageSizes.map((value) => ({ label: `${value} 条`, value }));
+const roleLabels: Record<string, string> = {
+  super_admin: "超管", admin: "管理员", user: "普通用户", premium: "高级用户", guest: "访客",
+};
 
 function positiveInteger(value: unknown, fallback: number) {
   const parsed = typeof value === "string" ? Number(value) : NaN;
@@ -57,6 +60,9 @@ const lastItem = computed(() =>
 const columns: TableColumn<UserRow>[] = [
   { accessorKey: "userId", header: "用户ID" },
   { accessorKey: "username", header: "用户名" },
+  { accessorKey: "roles", header: "用户角色" },
+  { accessorKey: "phone", header: "手机号" },
+  { accessorKey: "email", header: "用户邮箱" },
   { accessorKey: "nickname", header: "昵称" },
   { accessorKey: "gender", header: "性别" },
   { accessorKey: "address", header: "地址" },
@@ -65,8 +71,7 @@ const columns: TableColumn<UserRow>[] = [
 
 const drawerOpen = shallowRef(false);
 const editingUser = shallowRef<UserRow | null>(null);
-const confirmOpen = shallowRef(false);
-const deletingUser = shallowRef<UserRow | null>(null);
+const { confirm } = useConfirmModal();
 
 function openDrawer(user: UserRow | null) {
   editingUser.value = user;
@@ -88,22 +93,19 @@ async function saveUser(payload: UserDrawerPayload) {
   drawerOpen.value = false;
 }
 
-function startDelete(user: UserRow) {
-  deletingUser.value = user;
+async function startDelete(user: UserRow) {
+  if (deleting.value) return;
+  const confirmed = await confirm({
+    type: "delete",
+    title: `删除用户 · ${user.username}`,
+    description: "删除后无法恢复，确定继续吗？",
+  });
+  if (!confirmed) return;
   deleteUser.reset();
-  confirmOpen.value = true;
-}
-
-async function confirmDelete() {
-  if (!deletingUser.value || deleting.value) return;
-  const userId = deletingUser.value.userId;
-  // 乐观更新：确认即收起弹窗，行马上从列表消失。
-  // 失败时由 useUsers 用快照回滚，并通过 toast 提示；所以这里不再用 deleteError 就地展示。
-  confirmOpen.value = false;
   try {
-    await deleteUser.mutateAsync(userId);
+    await deleteUser.mutateAsync(user.userId);
   } catch {
-    // mutation 已回滚缓存并提示；在事件边界结束失败请求。
+    // 乐观删除的回滚和错误提示由 useUsers 负责。
   }
 }
 
@@ -184,6 +186,9 @@ watch([displayPage, lastPage, deleting], ([dataPage, last, isDeleting]) => {
       class="mt-4 w-full overflow-x-auto"
     >
       <template #nickname-cell="{ row }">{{ row.original.nickname || "—" }}</template>
+      <template #roles-cell="{ row }">{{ row.original.roles.length ? row.original.roles.map(role => roleLabels[role] ?? role).join('、') : '—' }}</template>
+      <template #phone-cell="{ row }">{{ row.original.phone || "—" }}</template>
+      <template #email-cell="{ row }">{{ row.original.email || "—" }}</template>
       <template #gender-cell="{ row }">{{ row.original.gender === 0 ? "女" : row.original.gender === 1 ? "男" : "—" }}</template>
       <template #address-cell="{ row }">{{ row.original.address || "—" }}</template>
       <template #actions-cell="{ row }">
@@ -224,13 +229,5 @@ watch([displayPage, lastPage, deleting], ([dataPage, last, isDeleting]) => {
       </div>
     </div>
     <UserDrawer v-model:open="drawerOpen" :user="editingUser" :pending="saving" :error="saveError" @submit="saveUser" />
-    <ConfirmModal
-      v-model:open="confirmOpen"
-      type="delete"
-      :title="`删除用户 · ${deletingUser?.username ?? ''}`"
-      description="删除后无法恢复，确定继续吗？"
-      :pending="deleting"
-      @confirm="confirmDelete"
-    />
   </div>
 </template>

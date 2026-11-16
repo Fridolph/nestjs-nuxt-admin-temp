@@ -10,6 +10,9 @@ const user = {
   gender: 0,
   photo: "https://example.com/a.png",
   address: "北京",
+  phone: null,
+  email: null,
+  roles: ["user"],
 };
 
 const validCreateUser = {
@@ -53,10 +56,7 @@ test("编辑资料只提交变化字段，清空可空字段传 null", () => {
 
   const edited = profileFormSchema(user).parse({ nickname: " Alice_2 ", gender: "", photo: "", address: "", bio: "尚未支持" });
   assert.deepEqual(profileChanges(user, edited), {
-    nickname: "Alice_2",
-    gender: null,
-    photo: null,
-    address: null,
+    profile: { nickname: "Alice_2", gender: null, photo: null, address: null },
   });
 });
 
@@ -71,5 +71,5 @@ test("历史无效昵称不变时仍可编辑其他资料", () => {
   const legacyUser = { ...user, nickname: "old name!" };
   const form = { nickname: legacyUser.nickname, gender: "0", photo: user.photo, address: "新地址" };
   assert.equal(profileFormSchema(legacyUser).safeParse(form).success, true);
-  assert.deepEqual(profileChanges(legacyUser, form), { address: "新地址" });
+  assert.deepEqual(profileChanges(legacyUser, form), { profile: { address: "新地址" } });
 });
