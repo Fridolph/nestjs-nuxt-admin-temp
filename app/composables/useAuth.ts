@@ -7,10 +7,40 @@ export function useAuth() {
 		sameSite: 'lax',
 		maxAge: 60 * 60 * 2,
 	})
-	const currentUser = useState<Pick<
-		AuthResponse['data'],
-		'userId' | 'username' | 'roleIds'
-	> | null>('auth-user', () => null)
+	const currentUser = useState<{
+		userId: number
+		username: string
+		roleIds: number[]
+	} | null>('auth-user', () => null)
+
+	function readTokenIdentity(token: string | null) {
+		if (!token || import.meta.server) return null
+		try {
+			const encoded = token.split('.')[1]
+			if (!encoded) return null
+			const payload = JSON.parse(atob(encoded.replace(/-/g, '+').replace(/_/g, '/'))) as {
+				userId?: unknown
+				username?: unknown
+				roleId?: unknown
+				roleIds?: unknown
+			}
+			const roleValue = payload.roleId ?? payload.roleIds
+			if (
+				typeof payload.userId !== 'number' ||
+				typeof payload.username !== 'string' ||
+				!Array.isArray(roleValue)
+			) return null
+			return {
+				userId: payload.userId,
+				username: payload.username,
+				roleIds: roleValue.filter((id): id is number => typeof id === 'number'),
+			}
+		} catch {
+			return null
+		}
+	}
+
+	if (!currentUser.value) currentUser.value = readTokenIdentity(tokenCookie.value)
 
 	function saveIdentity(response: AuthResponse) {
 		tokenCookie.value = response.data.accessToken
@@ -18,7 +48,7 @@ export function useAuth() {
 		currentUser.value = {
 			userId: response.data.userId,
 			username: response.data.username,
-			roleIds: response.data.roleIds,
+			roleIds: response.data.roleId ?? response.data.roleIds ?? [],
 		}
 	}
 
@@ -42,6 +72,7 @@ export function useAuth() {
 		tokenCookie.value = null
 		$authToken.value = null
 		currentUser.value = null
+		usePermission().clearPermissionContext()
 	}
 
 	return { currentUser, signIn, register, signOut }

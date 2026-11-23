@@ -17,7 +17,7 @@ const user = {
 
 const items: DropdownMenuItem[][] = [
   [{ type: "label", slot: "user" }],
-  [{ label: "Settings", icon: "i-lucide-settings-2", to: "/settings" }],
+  [{ label: "系统设置", icon: "i-lucide-settings-2", to: "/settings" }],
   [{ label: "登录页面", icon: "i-lucide-log-in", to: "/login" }],
 ];
 </script>

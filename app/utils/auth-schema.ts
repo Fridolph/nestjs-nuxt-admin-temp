@@ -32,6 +32,8 @@ export interface AuthResponseData {
   username: string;
   accessToken: string;
   tokenType: "Bearer";
-  roleIds: number[];
+  /** 当前后端返回 roleId；roleIds 兼容已签发的旧响应。 */
+  roleId?: number[];
+  roleIds?: number[];
 }
 export interface AuthResponse { code: number; data: AuthResponseData; msg: string }

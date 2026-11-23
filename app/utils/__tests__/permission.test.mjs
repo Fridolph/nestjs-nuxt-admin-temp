@@ -15,6 +15,13 @@ test("超管拥有全部有效权限，其余角色只使用明确授权的权�
   assert.equal(canAccess({ roleIds: [roleIds.user], permissions: ["user.profile:edit"] }, "user.profile:edit"), true);
 });
 
+test("服务端返回 all:manage 时可访问权限目录的管理操作", () => {
+  const context = { roleIds: [], permissions: ["all:manage"] };
+  assert.equal(canAccess(context, "permissions:read"), true);
+  assert.equal(canAccess(context, "permissions:manage"), true);
+  assert.equal(canAccess(context, ["permissions:read", "permissions:manage"]), true);
+});
+
 test("支持全部满足和任一满足的权限组合", () => {
   const context = { roleIds: [roleIds.admin], permissions: ["user.profile:edit", "user:read"] };
   assert.equal(canAccess(context, ["user.profile:edit", "user:read"]), true);

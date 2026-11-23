@@ -15,9 +15,14 @@ import { adminBrand, adminExternalNavigation, adminNavigation } from "../config/
  */
 const route = useRoute();
 const admin = useAdminStore();
+const { currentUser } = useAuth();
+// 导航只决定可见性；权限目录接口仍由后端根据当前数据库角色授权。
+const visibleNavigation = computed(() => adminNavigation.filter(item =>
+  item.to !== "/permissions" || currentUser.value?.roleIds.includes(1),
+));
 
 const pageTitle = computed(() =>
-  typeof route.meta.title === "string" ? route.meta.title : "Dashboard",
+  typeof route.meta.title === "string" ? route.meta.title : "仪表盘",
 );
 </script>
 
@@ -27,7 +32,7 @@ const pageTitle = computed(() =>
       v-model:open="admin.sidebarOpen"
       v-model:collapsed="admin.sidebarCollapsed"
       :brand="adminBrand"
-      :items="adminNavigation"
+      :items="visibleNavigation"
       :external-items="adminExternalNavigation"
     />
 

@@ -30,8 +30,10 @@ export function canAccess(context: PermissionContext | null, requirement: Permis
   if (context.roleIds.includes(roleIds.superAdmin)) return true;
 
   const granted = new Set(context.permissions);
-  if (typeof requirement === "string") return granted.has(requirement);
-  if (isPermissionList(requirement)) return requirement.every(permission => granted.has(permission));
-  return (requirement.all ?? []).every(permission => granted.has(permission))
-    && (!requirement.any?.length || requirement.any.some(permission => granted.has(permission)));
+  // /permissions/me 对超管返回 all:manage，作为有效权限快照中的通配授权。
+  const matches = (permission: string) => granted.has("all:manage") || granted.has(permission);
+  if (typeof requirement === "string") return matches(requirement);
+  if (isPermissionList(requirement)) return requirement.every(matches);
+  return (requirement.all ?? []).every(matches)
+    && (!requirement.any?.length || requirement.any.some(matches));
 }

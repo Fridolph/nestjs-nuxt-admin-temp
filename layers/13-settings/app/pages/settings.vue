@@ -8,7 +8,7 @@ import { settingsNavigation } from "../config/settings-navigation";
  */
 definePageMeta({
   layout: "has-sidebar",
-  title: "Settings",
+  title: "系统设置",
 });
 </script>
 
@@ -16,7 +16,7 @@ definePageMeta({
   <section class="flex min-h-0 flex-1 flex-col lg:flex-row">
     <aside class="w-full shrink-0 border-b border-default bg-default lg:w-60 lg:border-r lg:border-b-0">
       <div class="p-0 mt-3 pl-3">
-        <h2 class="text-lg font-semibold tracking-tight text-highlighted">Settings</h2>
+        <h2 class="text-lg font-semibold tracking-tight text-highlighted">系统设置</h2>
       </div>
 
       <UNavigationMenu

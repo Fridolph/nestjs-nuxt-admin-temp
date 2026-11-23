@@ -8,31 +8,37 @@ export const adminBrand: AdminBrandConfig = {
 
 export const adminNavigation: AdminNavigationItem[] = [
   {
-    label: "Dashboard",
+    label: "仪表盘",
     icon: "i-lucide-layout-dashboard",
     to: "/",
     exact: true,
   },
   {
-    label: "Projects",
+    label: "项目管理",
     icon: "i-lucide-folder-kanban",
     defaultOpen: true,
     children: [
-      { label: "All projects", to: "/projects" },
-      { label: "Recently viewed", to: "/projects/recent" },
+      { label: "全部项目", to: "/projects" },
+      { label: "最近查看", to: "/projects/recent" },
     ],
   },
   {
-    label: "Team",
+    label: "用户管理",
     icon: "i-lucide-users",
-    children: [
-      { label: "Users", to: "/team/users" },
-      { label: "Members", to: "/team/members" },
-      { label: "Roles & access", to: "/team/roles" },
-    ],
+    to: "/users",
   },
   {
-    label: "Settings",
+    label: "角色管理",
+    icon: "i-lucide-shield-user",
+    to: "/roles",
+  },
+  {
+    label: "权限管理",
+    icon: "i-lucide-key-round",
+    to: "/permissions",
+  },
+  {
+    label: "系统设置",
     icon: "i-lucide-settings-2",
     to: "/settings",
   },

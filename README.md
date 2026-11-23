@@ -28,6 +28,17 @@ pnpm preview
 
 `preview` 使用同一个 3050 端口，运行前先停止开发服务。本目录有自己的 `pnpm-workspace.yaml` 和锁文件，可以从父学习仓库中移出，作为独立 Git 仓库运行。
 
+## 权限目录展示
+
+`/permissions` 配合后端新的分组目录响应：`GET /permissions` 的 `data` 是资源组数组，
+每组包含 `resource/name/actions/permissions`。页面每个资源显示一行，展开后可查看、编辑或删除
+单条动作权限；字段范围和启用状态按明细独立展示。资源中文名由后端 `@CaslResource.label` 提供。
+`actions` 是已配置动作摘要（含停用项），不能当成当前用户授权。
+
+`GET /permissions/me` 保持扁平有效权限快照，用于前端入口显示；服务端 Guard 始终负责最终授权。
+单条创建/编辑接口保持原载荷，本阶段不增加多选批量创建或角色授权接口。
+后端目录响应结构已变化，前后端需配套更新，无数据库迁移。
+
 ## 技术栈与职责
 
 - Nuxt **4.6.3** / Vue 3：文件路由、SSR、Layouts、Layers。

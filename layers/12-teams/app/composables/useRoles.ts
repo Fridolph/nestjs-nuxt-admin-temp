@@ -14,7 +14,7 @@ export function useRoles() {
 	const toast = useToast()
 	const roleList = useQuery<RolesResponse, ApiError>({
 		key: () => ['roles'],
-		query: ({ signal }) => $api<RolesResponse>('/users/roles', { signal }),
+		query: ({ signal }) => $api<RolesResponse>('/roles', { signal }),
 		staleTime: 60_000,
 		gcTime: 10 * 60_000,
 		// ApiError 是自定义 Error 实例，角色列表在客户端发起，避免失败对象进入 SSR payload。
@@ -30,7 +30,7 @@ export function useRoles() {
 	}
 
 	const createRole = useMutation<RoleMutationResult, CreateRoleInput, ApiError>({
-		mutation: input => $api<RoleMutationResult>('/users/roles', { method: 'POST', body: input }),
+		mutation: input => $api<RoleMutationResult>('/roles', { method: 'POST', body: input }),
 		async onSuccess() {
 			toast.add({ title: '角色创建成功', color: 'success' })
 			await invalidateRoles()
@@ -42,14 +42,14 @@ export function useRoles() {
 		ApiError
 	>({
 		mutation: ({ id, data }) =>
-			$api<RoleMutationResult>(`/users/roles/${id}`, { method: 'PATCH', body: data }),
+			$api<RoleMutationResult>(`/roles/${id}`, { method: 'PATCH', body: data }),
 		async onSuccess() {
 			toast.add({ title: '角色信息已更新', color: 'success' })
 			await invalidateRoles()
 		},
 	})
 	const deleteRole = useMutation<RoleMutationResult, number, ApiError>({
-		mutation: id => $api<RoleMutationResult>(`/users/roles/${id}`, { method: 'DELETE' }),
+		mutation: id => $api<RoleMutationResult>(`/roles/${id}`, { method: 'DELETE' }),
 		async onSuccess() {
 			toast.add({ title: '角色已删除', color: 'success' })
 			await invalidateRoles()
