@@ -13,7 +13,8 @@ export interface UserRow {
 	username: string
 	phone: string | null
 	email: string | null
-	roles: string[]
+	roleId: number
+	roleCode: string
 	nickname: string | null
 	profileId: number | null
 	gender: number | null
@@ -52,7 +53,7 @@ export interface MutationResult {
 export interface CreateUserInput {
 	username: string
 	password: string
-	roleIds: number[]
+	roleId: number
 	nickname?: string
 	gender?: 0 | 1
 	photo?: string

@@ -2,7 +2,7 @@
 
 `nestjs-server-temp` 的配套管理后台学习项目。复用 [dao-monorepo-temp/apps/admin](https://github.com/Fridolph/dao-monorepo-temp/tree/main/apps/admin) 的布局、路由和认证页面风格，独立安装和运行。
 
-登录、注册目前只迁移界面：表单仅校验并显示提示，不发送接口请求、不创建账号、不保存登录状态。Dashboard 统计仍为示例，`/team/users` 已连接本地后端并支持创建、编辑资料和删除；Projects / Team / Settings 其余页面保留原有占位内容。
+登录、注册和登出已接入后端：短期 access token 保存在内存，HttpOnly refresh Cookie 用于刷新恢复会话。后台路由需先登录。Dashboard 统计仍为示例，`/team/users` 已连接本地后端并支持创建、编辑资料和删除；Projects / Team / Settings 其余页面保留原有占位内容。
 
 ## 开始使用
 
@@ -15,8 +15,8 @@ pnpm install --frozen-lockfile
 pnpm dev
 ```
 
-打开 <http://localhost:3050>；首页和登录注册页面不需要后端，访问 `/team/users` 前请先启动 `nestjs-server-temp` 并确认其监听 3000 端口。
-`.env` 中的 `NUXT_PUBLIC_API_BASE` 是公开的后端 API 根地址，默认值为 `http://localhost:3000/api/v1`。修改后重启 Nuxt；浏览器直接调用后端时，后端仍需允许来自 `http://localhost:3050` 的跨域请求。
+打开 <http://127.0.0.1:3050>；先启动 `nestjs-server-temp` 并确认其监听 3000 端口、已执行 auth_sessions 和 user_single_role 两份迁移。
+`.env` 中的 `NUXT_PUBLIC_API_BASE=/api/v1` 使用同源代理，Nuxt 将请求转发到 `http://127.0.0.1:3000/api/v1`，避免 localhost 与 127.0.0.1 混用导致 Cookie 丢失。修改配置后重启 Nuxt。生产部署需将代理目标改为后端实际地址，并配置后端 `AUTH_ALLOWED_ORIGINS` 为管理后台 HTTPS origin。
 
 ```bash
 pnpm lint
@@ -62,7 +62,7 @@ pnpm preview
 | `/settings/company`、`/settings/team` | 含二级导航的设置页面 |
 | `/help`、`/release-notes` | 帮助与本次迁移说明 |
 
-登录注册页面通过“浏览后台演示”访问首页，二者互相提供跳转链接。邮箱与手机登录暂时禁用，后续再接入对应接口。
+登录注册页面互相提供跳转链接；后台演示入口同样经过会话检查。邮箱与手机登录暂时禁用，后续再接入对应接口。
 
 ## 目录与扩展位置
 
@@ -108,7 +108,7 @@ definePageMeta({ layout: 'has-sidebar', title: '新页面' })
 `/team/users` 需要本地后端在 `http://localhost:3000` 提供用户查询、创建、资料更新和删除接口。页码和每页条数保存在 URL 查询参数中；列表数据按参数分别缓存，60 秒内返回同一页直接复用缓存，离开后最多保留 10 分钟。创建、编辑和删除成功后会主动使用户列表缓存失效并刷新。资料编辑只提交变化字段；个人简介目前在创建和编辑抽屉中预留，禁用且不提交，等待后端字段与接口支持。
 请求分三层，各管一件事：
 
-- `app/plugins/api.ts`：唯一创建 HTTP 客户端的地方，只做 baseURL、公共请求头、错误归一化，产物是 `$api`。它不认识任何业务 URL。
+- `app/plugins/api.ts`：统一 baseURL、公共请求头、错误归一化与认证会话生命周期，产物是 `$api` 和 `$authSession`；不处理用户、角色等领域业务。
 - `layers/12-teams/app/composables/useUsers.ts`：`users` 资源的统一入口。内部同时包含列表查询（`key`、`placeholderData`、`staleTime`、`gcTime`）与三个写操作（成功提示、`['users', ...]` 缓存失效），并对外暴露 `users` / `total` / `isInitialLoading` / `loading` / `isEmpty` / `error` / `saving` / `saveError` / `deleting` / `deleteError` 等派生状态。
 - `layers/12-teams/app/types/user.ts`：领域类型。放在独立文件是为了避免 `utils/user-form.ts` 反向依赖 composable 形成循环引用。
 
@@ -117,7 +117,7 @@ definePageMeta({ layout: 'has-sidebar', title: '新页面' })
 原有的 `useApi()`（把 `get/post/patch/remove` 原样转发一层）已移除：它不携带任何领域信息，调用方仍要手写 URL 与类型。
 
 加载与错误体验：首次加载（无缓存、无 SSR 数据）显示骨架屏；翻页与刷新保留旧数据，只用表格 loading 态提示；列表失败显示错误卡片并提供「重试」；创建/编辑失败在抽屉内就地提示。
-删除走**乐观更新**：确认后弹窗立即收起、目标行立刻从列表消失，失败时用缓存快照回滚并用 toast 提示「删除失败，列表已恢复」；成功后再让列表缓存失效重拉，对齐服务端的分页边界。删掉末页最后一条时，`total` 先减一，页码在删除成功后才收回上一页，期间不会闪「暂无用户数据」。创建用户可多选管理员、普通用户、高级用户或访客角色，并填写可选资料；后端创建接口会在事务中保存角色关联和资料。
+删除走**乐观更新**：确认后弹窗立即收起、目标行立刻从列表消失，失败时用缓存快照回滚并用 toast 提示「删除失败，列表已恢复」；成功后再让列表缓存失效重拉，对齐服务端的分页边界。删掉末页最后一条时，`total` 先减一，页码在删除成功后才收回上一页，期间不会闪「暂无用户数据」。创建用户需单选管理员、普通用户、高级用户或访客角色，并填写可选资料；后端创建接口会在事务中保存角色关联和资料。
 
 ## 权限预留
 
@@ -139,7 +139,7 @@ const canEditProfile = computed(() => hasPermission('user.profile:edit'))
 </template>
 ```
 
-未来登录接口返回身份与权限码后，再调用 `setPermissionContext({ roleIds: [1], permissions: [...] })`。角色 ID 依次为超管 1、管理员 2、普通用户 3、高级用户 4、访客 5；目前只实现超管拥有全部权限，其余角色仅使用明确返回的权限码，未擅自推断权限映射。当前没有登录会话，默认不授予权限，因此暂未把指令接到现有用户操作按钮。该封装只控制前端展示和交互，接口授权仍需由后端校验。
+权限上下文可通过以下形式设置： `setPermissionContext({ roleId: 1, permissions: [...] })`。角色 ID 依次为超管 1、管理员 2、普通用户 3、高级用户 4、访客 5；目前只实现超管拥有全部权限，其余角色仅使用明确返回的权限码，未擅自推断权限映射。登录身份不等于权限快照；默认不授予权限，需从服务端有效权限加载后设置。该封装只控制前端展示和交互，接口授权仍需由后端校验。
 
 ## 迁移来源与取舍
 
@@ -149,7 +149,20 @@ const canEditProfile = computed(() => hasPermission('user.profile:edit'))
 
 未迁移编辑器、上传、PDF、简历、Comps/Demos 及 Alova 请求封装，也未引入旧 monorepo 的业务包。帮助页保留基础说明，更新记录改为本次实际迁移内容；侧栏初始关闭移动端抽屉，设置二级导航在小屏也可访问。系统字体和本地图标用于避免构建依赖远程字体服务。
 
-认证请求由 `app/composables/useAuth.ts` 调用后端 `/auth/signin` 与 `/auth/register`，成功后保存 Bearer Token；`app/plugins/api.ts` 自动附加请求头。路由守卫、刷新令牌与服务端会话仍留待后续完善。
+## 登录、续期与登出
+
+- `useAuth` 是页面入口，`plugins/api.ts` 持有身份、内存 access token 和 Colada 缓存；`utils/auth-session.ts` 管理续期并发及会话边界。
+- 首次进入后台或刷新页面时，路由中间件调用 `POST /auth/refresh` 恢复会话。应用内容在客户端挂载，服务端只输出加载占位，避免未验证身份时渲染后台与 hydration 跳转冲突。
+- 业务接口 401：同一标签页合并一次 refresh，成功后重试原请求一次；refresh 401 才清身份、权限及查询/写操作缓存并跳登录。403 表示无权限，保留会话并显示错误。
+- 登录页 `redirect` 保留原页面的查询参数与 hash；仅允许站内地址。登录或注册成功后返回该位置。
+- 用户菜单退出调用 `POST /auth/logout`，服务端撤销成功后清理状态并回登录。网络故障会提示重试，不假装退出成功。当前实现退出当前设备，不是所有设备。
+- access token 不写 Cookie/localStorage，也不进入 SSR payload。refresh Cookie 的 HttpOnly 属性由后端设置，JS 不读取；认证写请求自动附加 `X-Auth-Request: 1`。
+- 同源标签页用 Web Locks 串行轮换 Cookie，用 BroadcastChannel 同步登录/退出并重新加载。请使用支持这些 API 的现代浏览器；无 Web Locks 时只有单标签页并发合并，多标签页竞争可能被后端当作重放并要求重新登录。
+- 旧版没有 session id 的 JWT 不再可用，升级后需重新登录。前端路由和按钮仅改善体验，最终鉴权始终在后端。
+
+前端 `pnpm test` 覆盖并发 401、403 不登出、网络失败、重复退出、迟到响应隔离与安全回跳；后端会话协议、迁移和联调步骤见相邻后端项目 `src/auth/README.md`。
+
+本轮已在桌面 1440×1000 和移动端 390×844 验证登录/退出，另验证刷新恢复、分页地址回跳、一次模拟 access 失效后的真实续期重试及双标签页同步退出。退出时先取消请求，清除查询数据、翻页占位和 mutation 缓存；仍被页面订阅的查询只保留空壳，卸载后由 Colada 正常回收，不直接删除活跃订阅。
 
 ## 界面迁移验证
 
@@ -168,3 +181,9 @@ const canEditProfile = computed(() => hasPermission('user.profile:edit'))
 开发端口集中配置在 `nuxt.config.ts` 的 `devServer.port: 3050`；`pnpm dev` 直接使用该配置，`pnpm preview` 同样使用 3050。
 
 项目锁定 pnpm **12.16.1**（2026-10-30 核实的最新 12.x 稳定版），并使用该版本重新生成锁文件。已验证 `pnpm install --frozen-lockfile`、lint、类型检查、测试和构建通过，首页及登录页在 3050 端口均返回 HTTP 200。
+
+## 单角色接口约定
+
+用户身份和创建载荷统一使用 `roleId: number`；用户列表返回 `roleId/roleCode`，不再返回 roles 数组。注册仍由服务端固定普通用户。创建抽屉使用单选角色，后端以 user.roleId 外键保证一个用户只有一个角色；角色到权限的多对多关系不变。
+
+`AuthUser` 与登录响应共用身份字段类型，避免登录状态中重新定义角色数组。`roleIdByCode` 是角色编码到 ID 的字典，用户的角色字段则始终叫 `roleId`。

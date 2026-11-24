@@ -11,14 +11,15 @@ import type {
 export function useRoles() {
 	const $api = useNuxtApp().$api
 	const queryCache = useQueryCache()
+	const { currentUser } = useAuth()
 	const toast = useToast()
 	const roleList = useQuery<RolesResponse, ApiError>({
-		key: () => ['roles'],
+		key: () => ['roles', currentUser.value?.userId ?? 'anonymous'],
 		query: ({ signal }) => $api<RolesResponse>('/roles', { signal }),
 		staleTime: 60_000,
 		gcTime: 10 * 60_000,
 		// ApiError 是自定义 Error 实例，角色列表在客户端发起，避免失败对象进入 SSR payload。
-		enabled: () => import.meta.client,
+		enabled: () => import.meta.client && !!currentUser.value,
 	})
 
 	async function invalidateRoles() {

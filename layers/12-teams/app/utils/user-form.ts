@@ -12,9 +12,7 @@ export const createUserSchema = z.object({
   password: z.string().min(6, "密码至少 6 位").max(32, "密码最多 32 个字符")
     .refine(value => passwordStrength(value) !== "低", "密码不能只用数字或字母，请组合至少两类字符"),
   confirmPassword: z.string().min(1, "请再次输入密码"),
-  roleIds: z.array(z.union([z.literal(2), z.literal(3), z.literal(4), z.literal(5)]))
-    .min(1, "请至少选择一个角色")
-    .refine(ids => new Set(ids).size === ids.length, "角色不能重复"),
+  roleId: z.union([z.literal(2), z.literal(3), z.literal(4), z.literal(5)]),
   nickname: z.union([z.literal(""), z.string().trim().min(1).max(20)
     .regex(/^[A-Za-z0-9_\p{Script=Han}]+$/u, "昵称只能包含中文、英文字母、数字和下划线")]),
   gender: z.enum(["", "0", "1"]),
@@ -48,7 +46,7 @@ export function createUserPayload(input: CreateUserForm): CreateUserInput {
   return {
     username: input.username,
     password: input.password,
-    roleIds: input.roleIds,
+    roleId: input.roleId,
     ...(input.nickname ? { nickname: input.nickname } : {}),
     ...(input.gender ? { gender: Number(input.gender) as 0 | 1 } : {}),
     ...(input.photo ? { photo: input.photo } : {}),
@@ -74,6 +72,6 @@ export function profileChanges(user: UserRow, input: ProfileFormInput): UserChan
   if (Object.keys(changes).length) result.profile = changes;
   if ((input.phone || null) !== user.phone) result.phone = input.phone || null;
   if ((input.email || null) !== user.email) result.email = input.email || null;
-  if (input.roleCode && (user.roles.length !== 1 || user.roles[0] !== input.roleCode)) result.roleCode = input.roleCode;
+  if (input.roleCode && user.roleCode !== input.roleCode) result.roleCode = input.roleCode;
   return result;
 }

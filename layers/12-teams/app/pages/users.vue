@@ -60,7 +60,7 @@ const lastItem = computed(() =>
 const columns: TableColumn<UserRow>[] = [
   { accessorKey: "userId", header: "用户ID" },
   { accessorKey: "username", header: "用户名" },
-  { accessorKey: "roles", header: "用户角色" },
+  { accessorKey: "roleCode", header: "用户角色" },
   { accessorKey: "phone", header: "手机号" },
   { accessorKey: "email", header: "用户邮箱" },
   { accessorKey: "nickname", header: "昵称" },
@@ -112,6 +112,7 @@ async function startDelete(user: UserRow) {
 function goToPage(nextPage: number, nextSize = size.value) {
   return navigateTo({
     path: route.path,
+    hash: route.hash,
     query: {
       ...route.query,
       page: nextPage === 1 ? undefined : String(nextPage),
@@ -124,13 +125,14 @@ function changeSize(nextSize: number) {
   return goToPage(1, nextSize);
 }
 
-watch([displayPage, lastPage, deleting], ([dataPage, last, isDeleting]) => {
+watch([displayPage, lastPage, deleting, isInitialLoading, error], ([dataPage, last, isDeleting, pending, loadError]) => {
+  // 首次加载尚无 total 时不校正页码，保留登录回跳的分页位置。
   // 删到末页最后一条时，lastPage 会先变小（total 被乐观减一），此时要把页码收回来。
   // 三点约束：
   // 1. 只在“数据确实属于当前 URL 页”时兜底，placeholderData 期间 displayPage 还是旧页，不能据此跳页；
   // 2. 删除进行中先不动，否则失败回滚后会出现“跳走了又跳回来”；
   // 3. deleting 也是依赖项——删除结束那一刻需要再跑一次，把迟到的跨页判断补上。
-  if (import.meta.server || isDeleting || dataPage !== page.value) return;
+  if (import.meta.server || pending || loadError || isDeleting || dataPage !== page.value) return;
   if (dataPage > last) void goToPage(last);
 }, { immediate: true });
 </script>
@@ -186,7 +188,7 @@ watch([displayPage, lastPage, deleting], ([dataPage, last, isDeleting]) => {
       class="mt-4 w-full overflow-x-auto"
     >
       <template #nickname-cell="{ row }">{{ row.original.nickname || "—" }}</template>
-      <template #roles-cell="{ row }">{{ row.original.roles.length ? row.original.roles.map(role => roleLabels[role] ?? role).join('、') : '—' }}</template>
+      <template #roleCode-cell="{ row }">{{ roleLabels[row.original.roleCode] ?? row.original.roleCode }}</template>
       <template #phone-cell="{ row }">{{ row.original.phone || "—" }}</template>
       <template #email-cell="{ row }">{{ row.original.email || "—" }}</template>
       <template #gender-cell="{ row }">{{ row.original.gender === 0 ? "女" : row.original.gender === 1 ? "男" : "—" }}</template>

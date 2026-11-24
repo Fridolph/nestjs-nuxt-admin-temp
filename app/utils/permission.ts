@@ -1,13 +1,13 @@
-export const roleIds = {
-  superAdmin: 1,
+export const roleIdByCode = {
+  super_admin: 1,
   admin: 2,
   user: 3,
-  advancedUser: 4,
+  premium: 4,
   guest: 5,
 } as const;
 
 export interface PermissionContext {
-  roleIds: readonly number[];
+  roleId: number | null;
   permissions: readonly string[];
 }
 
@@ -27,7 +27,7 @@ export function canAccess(context: PermissionContext | null, requirement: Permis
     ? [requirement]
     : isPermissionList(requirement) ? requirement : [...(requirement.all ?? []), ...(requirement.any ?? [])];
   if (required.length === 0 || required.some(permission => !permission.trim())) return false;
-  if (context.roleIds.includes(roleIds.superAdmin)) return true;
+  if (context.roleId === roleIdByCode.super_admin) return true;
 
   const granted = new Set(context.permissions);
   // /permissions/me 对超管返回 all:manage，作为有效权限快照中的通配授权。

@@ -12,14 +12,15 @@ const user = {
   address: "北京",
   phone: null,
   email: null,
-  roles: ["user"],
+  roleId: 3,
+  roleCode: "user",
 };
 
 const validCreateUser = {
   username: "alice",
   password: "secret123",
   confirmPassword: "secret123",
-  roleIds: [3],
+  roleId: 3,
   nickname: "",
   gender: "",
   photo: "",
@@ -35,8 +36,8 @@ test("创建用户表单限制必填字段和长度", () => {
   assert.equal(createUserSchema.safeParse({ ...validCreateUser, password: "123456" }).success, false);
   assert.equal(createUserSchema.safeParse({ ...validCreateUser, password: "abcdef" }).success, false);
   assert.equal(createUserSchema.safeParse({ ...validCreateUser, confirmPassword: "different" }).success, false);
-  assert.equal(createUserSchema.safeParse({ ...validCreateUser, roleIds: [] }).success, false);
-  assert.equal(createUserSchema.safeParse({ ...validCreateUser, roleIds: [3, 3] }).success, false);
+  assert.equal(createUserSchema.safeParse({ ...validCreateUser, roleId: [] }).success, false);
+  assert.equal(createUserSchema.safeParse({ ...validCreateUser, roleId: [3, 3] }).success, false);
 });
 
 test("密码强度提示与提交门槛一致，确认密码不发送给后端", () => {
@@ -46,7 +47,7 @@ test("密码强度提示与提交门槛一致，确认密码不发送给后端",
   assert.deepEqual(createUserPayload(createUserSchema.parse(validCreateUser)), {
     username: "alice",
     password: "secret123",
-    roleIds: [3],
+    roleId: 3,
   });
 });
 

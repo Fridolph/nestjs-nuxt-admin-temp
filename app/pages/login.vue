@@ -1,8 +1,10 @@
 <script setup lang="ts">
+import { safeReturnTo } from "../utils/auth-session";
 import type { LoginCredentials } from "../utils/auth-schema";
 
 definePageMeta({ layout: false, title: "登录" });
 const toast = useToast();
+const route = useRoute();
 const { signIn } = useAuth();
 const pending = shallowRef(false);
 const error = shallowRef("");
@@ -13,7 +15,7 @@ async function handleSubmit(credentials: LoginCredentials) {
   try {
     const response = await signIn(credentials);
     toast.add({ title: "登录成功", description: response.msg, color: "success" });
-    await navigateTo("/");
+    await navigateTo(safeReturnTo(route.query.redirect), { replace: true });
   } catch (cause) {
     error.value = cause instanceof Error ? cause.message : "登录失败，请稍后重试";
   } finally {
@@ -34,7 +36,7 @@ async function handleSubmit(credentials: LoginCredentials) {
       </NuxtLink>
     </template>
 
-    <AuthLoginForm :pending="pending" :error="error" @submit="handleSubmit" />
+    <AuthLoginForm :create-account-to="{ path: '/register', query: { redirect: safeReturnTo(route.query.redirect) } }" :pending="pending" :error="error" @submit="handleSubmit" />
     <UButton to="/" label="浏览后台演示" variant="link" color="neutral" class="mt-4" />
 
     <template #image-caption>

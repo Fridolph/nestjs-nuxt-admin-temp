@@ -1,8 +1,10 @@
 <script setup lang="ts">
+import { safeReturnTo } from "../utils/auth-session";
 import type { RegisterCredentials } from "../utils/auth-schema";
 
 definePageMeta({ layout: false, title: "注册" });
 const toast = useToast();
+const route = useRoute();
 const { register } = useAuth();
 const pending = shallowRef(false);
 const error = shallowRef("");
@@ -13,7 +15,7 @@ async function handleSubmit(credentials: RegisterCredentials) {
   try {
     const response = await register(credentials);
     toast.add({ title: "注册成功", description: response.msg, color: "success" });
-    await navigateTo("/");
+    await navigateTo(safeReturnTo(route.query.redirect), { replace: true });
   } catch (cause) {
     error.value = cause instanceof Error ? cause.message : "注册失败，请稍后重试";
   } finally {

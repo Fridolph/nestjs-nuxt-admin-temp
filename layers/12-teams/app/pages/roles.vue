@@ -6,21 +6,8 @@ import { useRoles } from '../composables/useRoles'
 definePageMeta({ layout: 'has-sidebar', title: '角色管理' })
 
 const { currentUser } = useAuth()
-const accessToken = useCookie<string | null>('access_token')
-// 页面显示状态可从登录时保存的身份或 JWT 恢复；服务端守卫仍按数据库角色授权。
-const tokenRoleIds = computed(() => {
-  try {
-    if (import.meta.server) return []
-    const payload = accessToken.value?.split('.')[1]
-    if (!payload) return []
-    const decoded: unknown = JSON.parse(atob(payload.replace(/-/g, '+').replace(/_/g, '/')))
-    if (typeof decoded !== 'object' || decoded === null) return []
-    const identity = decoded as { roleId?: unknown; roleIds?: unknown }
-    const ids = identity.roleId ?? identity.roleIds
-    return Array.isArray(ids) ? ids.filter((id): id is number => typeof id === 'number') : []
-  } catch { return [] }
-})
-const canManageRoles = computed(() => (currentUser.value?.roleIds ?? tokenRoleIds.value).some(id => id === 1 || id === 2))
+// 仅控制界面入口，服务端仍按当前数据库角色授权。
+const canManageRoles = computed(() => [1, 2].includes(currentUser.value?.roleId ?? 0))
 const { roles, error, loading, isInitialLoading, refetch, createRole, updateRole, deleteRole, saving, saveError, deleting } = useRoles()
 const drawerOpen = shallowRef(false)
 const editingRole = shallowRef<RoleRow | null>(null)

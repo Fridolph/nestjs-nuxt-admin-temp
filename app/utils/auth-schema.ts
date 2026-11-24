@@ -32,8 +32,9 @@ export interface AuthResponseData {
   username: string;
   accessToken: string;
   tokenType: "Bearer";
-  /** 当前后端返回 roleId；roleIds 兼容已签发的旧响应。 */
-  roleId?: number[];
-  roleIds?: number[];
+  /** 一个用户对应一个角色，权限列表由服务端另行查询。 */
+  roleId: number;
 }
+/** 登录状态只保留身份字段，与登录、注册、续期响应共用单角色类型。 */
+export type AuthUser = Pick<AuthResponseData, "userId" | "username" | "roleId">;
 export interface AuthResponse { code: number; data: AuthResponseData; msg: string }

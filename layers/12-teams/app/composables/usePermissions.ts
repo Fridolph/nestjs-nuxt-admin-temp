@@ -24,7 +24,7 @@ export function usePermissions() {
   const auth = useAuth()
   const permission = usePermission()
   const userId = computed(() => auth.currentUser.value?.userId ?? null)
-  const token = useCookie<string | null>('access_token')
+  const token = useNuxtApp().$authToken
 
   const effective = useQuery<EffectivePermissionsResponse, ApiError>({
     key: () => ['permissions', 'me', userId.value ?? 'anonymous'],
@@ -45,7 +45,7 @@ export function usePermissions() {
     [userId, effective.data, effective.error],
     ([id, response, error]) => {
       permission.setPermissionContext({
-        roleIds: [],
+        roleId: null,
         permissions: id !== null && !error ? (response?.data.map(item => item.code) ?? []) : [],
       })
     },
@@ -54,7 +54,7 @@ export function usePermissions() {
 
   const hasPermission = (requirement: PermissionRequirement) => canAccess(
     {
-      roleIds: [],
+      roleId: null,
       permissions: effective.error.value ? [] : permissionCodes.value,
     },
     requirement

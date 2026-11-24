@@ -7,12 +7,9 @@ definePageMeta({
   layout: 'has-sidebar',
   title: '权限管理',
   middleware: () => {
-    const token = useCookie<string | null>('access_token')
-    if (!token.value) return navigateTo('/login')
-    // 服务端不解析 JWT 作授权判断；客户端只用角色 ID 控制页面可见性。
     if (import.meta.server) return
     const { currentUser } = useAuth()
-    if (!currentUser.value?.roleIds.includes(1)) {
+    if (!(currentUser.value?.roleId === 1)) {
       return abortNavigation(createError({ statusCode: 403, statusMessage: '仅超管可访问权限管理' }))
     }
   },

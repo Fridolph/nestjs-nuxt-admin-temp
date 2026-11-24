@@ -8,7 +8,7 @@ interface LoginFormProps {
   error?: string;
   title?: string;
   submitLabel?: string;
-  createAccountTo?: string;
+  createAccountTo?: string | { path: string; query: { redirect: string } };
 }
 
 withDefaults(defineProps<LoginFormProps>(), {

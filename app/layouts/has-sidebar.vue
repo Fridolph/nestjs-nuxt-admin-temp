@@ -18,7 +18,7 @@ const admin = useAdminStore();
 const { currentUser } = useAuth();
 // 导航只决定可见性；权限目录接口仍由后端根据当前数据库角色授权。
 const visibleNavigation = computed(() => adminNavigation.filter(item =>
-  item.to !== "/permissions" || currentUser.value?.roleIds.includes(1),
+  item.to !== "/permissions" || (currentUser.value?.roleId === 1),
 ));
 
 const pageTitle = computed(() =>

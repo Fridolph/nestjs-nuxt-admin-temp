@@ -17,15 +17,11 @@ const emit = defineEmits<{
   submit: [payload: UserDrawerPayload];
 }>();
 const open = defineModel<boolean>("open", { required: true });
-const form = reactive({ username: "", password: "", confirmPassword: "", roleIds: [] as (2 | 3 | 4 | 5)[], nickname: "", gender: "" as "" | "0" | "1", photo: "", address: "", phone: "", email: "", roleCode: "" as "" | "admin" | "user" | "premium" | "guest", bio: "" });
+const form = reactive({ username: "", password: "", confirmPassword: "", roleId: 3 as 2 | 3 | 4 | 5, nickname: "", gender: "" as "" | "0" | "1", photo: "", address: "", phone: "", email: "", roleCode: "" as "" | "admin" | "user" | "premium" | "guest", bio: "" });
 const notice = shallowRef("");
 const passwordVisible = shallowRef(false);
 const confirmPasswordVisible = shallowRef(false);
 const schema = computed(() => props.user ? profileFormSchema(props.user) : createUserSchema);
-const selectedRoles = computed({
-  get: () => form.roleIds.map(String),
-  set: values => { form.roleIds = values.map(value => Number(value) as 2 | 3 | 4 | 5); },
-});
 const strength = computed(() => passwordStrength(form.password));
 const strengthColor = computed(() => strength.value === "高" ? "text-success" : strength.value === "中" ? "text-warning" : "text-error");
 const genderOptions = [
@@ -33,10 +29,10 @@ const genderOptions = [
   { label: "男", value: "1" },
 ];
 const roleOptions = [
-  { label: "管理员", value: "2" },
-  { label: "普通用户", value: "3" },
-  { label: "高级用户", value: "4" },
-  { label: "访客", value: "5" },
+  { label: "管理员", value: 2 },
+  { label: "普通用户", value: 3 },
+  { label: "高级用户", value: 4 },
+  { label: "访客", value: 5 },
 ];
 const editRoleOptions = [
   { label: "管理员", value: "admin" },
@@ -44,7 +40,7 @@ const editRoleOptions = [
   { label: "高级用户", value: "premium" },
   { label: "访客", value: "guest" },
 ];
-const isSuperAdmin = computed(() => !!props.user?.roles.includes("super_admin"));
+const isSuperAdmin = computed(() => props.user?.roleCode === "super_admin");
 
 watch([open, () => props.user], ([isOpen, user]) => {
   if (!isOpen) return;
@@ -52,14 +48,14 @@ watch([open, () => props.user], ([isOpen, user]) => {
     username: user?.username ?? "",
     password: "",
     confirmPassword: "",
-    roleIds: [],
+    roleId: 3,
     nickname: user?.nickname ?? "",
     gender: user?.gender == null ? "" : String(user.gender),
     photo: user?.photo ?? "",
     address: user?.address ?? "",
     phone: user?.phone ?? "",
     email: user?.email ?? "",
-    roleCode: user?.roles.find(role => ["admin", "user", "premium", "guest"].includes(role)) ?? "",
+    roleCode: (["admin", "user", "premium", "guest"].includes(user?.roleCode ?? "") ? user?.roleCode : "") ?? "",
     bio: "",
   });
   notice.value = "";
@@ -129,8 +125,8 @@ function submit() {
               </template>
             </UInput>
           </UFormField>
-          <UFormField name="roleIds" label="用户角色" required>
-            <UCheckboxGroup v-model="selectedRoles" :items="roleOptions" value-key="value" class="w-full" />
+          <UFormField name="roleId" label="用户角色" required>
+            <USelect v-model="form.roleId" :items="roleOptions" value-key="value" class="w-full" />
           </UFormField>
         </template>
         <template v-else>

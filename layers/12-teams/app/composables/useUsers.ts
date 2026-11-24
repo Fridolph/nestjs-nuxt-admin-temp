@@ -41,13 +41,15 @@ export function useUsers({ page, size }: UseUsersOptions) {
 	// 避免在异步回调里重新获取 Nuxt 上下文。
 	const api = useNuxtApp().$api
 	const queryCache = useQueryCache()
+	const { currentUser } = useAuth()
 	const toast = useToast()
 
 	// ── 列表查询 ───────────────────────────────────────────────
 	// 一页 = 一个缓存条目：key 里带页码与每页条数，来回翻页可直接命中缓存。
 	const list = useQuery<UsersPage, ApiError>({
 		// key 必须写成 getter，页码变化时 Colada 才会切到新的缓存条目
-		key: () => ['users', { page: page.value, size: size.value }],
+		key: () => ['users', currentUser.value?.userId ?? 'anonymous', { page: page.value, size: size.value }],
+		enabled: () => import.meta.client && !!currentUser.value,
 		query: ({ signal }) =>
 			api<UsersPage>('/users', {
 				query: { page: page.value, size: size.value },
@@ -161,16 +163,18 @@ export function useUsers({ page, size }: UseUsersOptions) {
 		MutationResult,
 		number,
 		ApiError,
-		{ snapshots: UsersCacheSnapshot[] }
+		{ snapshots: UsersCacheSnapshot[]; owner: typeof currentUser.value }
 	>({
 		onMutate(id) {
 			queryCache.cancelQueries({ key: ['users'] })
 			const snapshots = snapshotUsersCache()
 			removeUserFromCache(id)
-			return { snapshots }
+			return { snapshots, owner: currentUser.value }
 		},
 		mutation: id => api<MutationResult>(`/users/${id}`, { method: 'DELETE' }),
 		onError(error, _id, context) {
+			// 登出或切换账号后，旧写操作不得用快照恢复上一位用户的缓存。
+			if (context?.owner !== currentUser.value) return
 			for (const snapshot of context?.snapshots ?? []) {
 				queryCache.setQueryData(snapshot.key, snapshot.data)
 			}

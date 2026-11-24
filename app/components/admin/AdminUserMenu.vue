@@ -7,19 +7,22 @@ interface UserMenuProps {
 
 const props = withDefaults(defineProps<UserMenuProps>(), { collapsed: false });
 
-// 纯界面占位信息，不代表当前存在登录会话。
-const user = {
-  name: "演示用户",
-  email: "admin@example.com",
-  initials: "AD",
+const { currentUser, signOut, signingOut } = useAuth();
+const toast = useToast();
+const user = computed(() => ({
+  name: currentUser.value?.username ?? "未登录",
+  email: currentUser.value ? `用户 ID · ${currentUser.value.userId}` : "请登录",
+  initials: currentUser.value?.username.slice(0, 2).toUpperCase() ?? "?",
   avatar: undefined as string | undefined,
-};
-
-const items: DropdownMenuItem[][] = [
+}));
+const items = computed<DropdownMenuItem[][]>(() => [
   [{ type: "label", slot: "user" }],
   [{ label: "系统设置", icon: "i-lucide-settings-2", to: "/settings" }],
-  [{ label: "登录页面", icon: "i-lucide-log-in", to: "/login" }],
-];
+  [{ label: signingOut.value ? "正在退出…" : "退出登录", icon: "i-lucide-log-out", disabled: signingOut.value, onSelect: async () => {
+    try { await signOut(); }
+    catch (cause) { toast.add({ title: "退出失败，请重试", description: cause instanceof Error ? cause.message : "无法连接服务器", color: "error" }); }
+  } }],
+]);
 </script>
 
 <template>
